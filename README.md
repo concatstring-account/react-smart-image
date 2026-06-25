@@ -2,7 +2,7 @@
 
 A drop-in replacement for `<img>` with lazy loading, WebP auto-detection, blur placeholders, skeleton loaders, retry logic, responsive images, and more — zero runtime dependencies.
 
-📦 **npm:** https://www.npmjs.com/package/@concatstring/react-smart-image
+**[🔗 Live Demo](https://react-smart-image.netlify.app/)**
 
 ## Installation
 
