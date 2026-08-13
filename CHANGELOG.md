@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2026-08-13
+
+### Added
+
+- `prefetch` prop — warms the image cache in the background (at low fetch priority) ahead of an image entering the viewport or being opened, so it resolves instantly once it's actually needed. Ignored when `priority` is set. Also prefetches `zoomSrc` when `zoom` is enabled with a distinct high-res source.
+- `prefetchImage(src, options?)` — standalone export for prefetching an image (or a responsive `srcSet` candidate) outside of a `SmartImage` instance, e.g. for the next item in a gallery/carousel.
+- `objectFit` / `objectPosition` props — control how the image fills its box and which part stays visible when cropped, mirroring the CSS `object-fit` / `object-position` properties.
+- `onLoadProgress` callback — reports byte-level download progress (`loaded`, `total`, `progress`) while an image loads, for building custom progress bars on large images. Requires `fetch`/`ReadableStream` support and a same-origin or CORS-enabled `src`; falls back to a normal load with no progress events otherwise. Not supported together with `responsive`, since candidate selection is left to the browser.
+- `PrefetchOptions` and `LoadProgressInfo` types, exported from the package root.
+
 ## [2.1.0] - 2026-07-29
 
 ### Added

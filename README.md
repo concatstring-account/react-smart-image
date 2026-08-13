@@ -132,8 +132,10 @@ Instead of combining multiple image libraries, React Smart Image provides everyt
 
 - ✅ Lazy Loading
 - ✅ Priority Loading
+- ✅ Image Prefetch
 - ✅ Responsive Images
 - ✅ Aspect Ratio
+- ✅ Object Fit & Position
 - ✅ Image Preloading
 - ✅ AVIF & WebP Detection
 - ✅ Progressive Thumbnail Loading
@@ -178,6 +180,7 @@ Instead of combining multiple image libraries, React Smart Image provides everyt
 - ✅ Image Presets
 - ✅ Responsive URL Builder
 - ✅ Analytics Callbacks
+- ✅ Download Progress Tracking
 - ✅ SSR Friendly
 
 ## 🏆 Feature Comparison
@@ -204,7 +207,10 @@ Instead of combining multiple image libraries, React Smart Image provides everyt
 | Your Goal | Feature |
 |------------|----------|
 | Improve LCP | `priority` |
+| Warm the cache for a likely-next image | `prefetch` |
 | Improve CLS | `aspectRatio` |
+| Crop/fit an image into its box | `objectFit` |
+| Keep the important part of an image visible | `objectPosition` |
 | Faster Loading | `responsive` |
 | Better UX | `placeholder="blur"` |
 | Loading Animation | `skeleton` |
@@ -213,6 +219,7 @@ Instead of combining multiple image libraries, React Smart Image provides everyt
 | Broken Image | `fallback` |
 | Retry Failed Images | `retry` |
 | Modern Formats | `format="auto"` |
+| Custom Progress Bar | `onLoadProgress` |
 
 # Table of Contents
 
@@ -220,7 +227,9 @@ Instead of combining multiple image libraries, React Smart Image provides everyt
 - [Quick Start](#quick-start)
 - [Lazy Loading](#lazy-loading)
 - [Priority Loading](#priority-loading-lcp)
+- [Image Prefetch](#image-prefetch)
 - [Aspect Ratio](#aspect-ratio-prevent-cls)
+- [Object Fit & Position](#object-fit-position)
 - [Skeleton Loader](#skeleton-loader)
 - [Blur Placeholder](#blur-placeholder-lqip)
 - [Image Transition](#load-transitions)
@@ -325,6 +334,61 @@ Combine it with `responsive` — the preload link mirrors the rendered image via
 
 > ⚠️ Only use `priority` for one or two images per page.
 
+<a id="image-prefetch"></a>
+
+## Image Prefetch
+
+Fetch an image before the user actually needs it, so it's already cached and shows instantly once it's rendered or opened.
+
+Ideal for:
+
+- The next image in a gallery/carousel
+- A card's image, ahead of a navigation you know is coming
+- The high-resolution source behind a `zoom` thumbnail
+
+```jsx
+<SmartImage
+  src="/product.jpg"
+  alt="Product"
+  prefetch
+/>
+```
+
+Unlike `priority`, `prefetch` doesn't force this image to render eagerly or bump its `loading`/`fetchpriority` attributes — it only warms the shared cache in the background, at low fetch priority, so it never competes with images the user is actually looking at. It works fine on a `lazy` image that isn't visible yet.
+
+```jsx
+<SmartImage
+  src="/gallery/next.jpg"
+  alt="Next photo"
+  lazy
+  prefetch
+/>
+```
+
+Combine it with `zoom` + `zoomSrc` to also warm the high-res source, so opening the zoom view has no visible delay:
+
+```jsx
+<SmartImage
+  src="/thumb.jpg"
+  alt="Product"
+  zoom
+  zoomSrc="/full-4000.jpg"
+  prefetch
+/>
+```
+
+Need to prefetch an image that isn't rendered as a `SmartImage` at all yet — e.g. the next product in a list you haven't scrolled to? Call `prefetchImage` directly:
+
+```tsx
+import { prefetchImage } from "@concatstring/react-smart-image";
+
+prefetchImage("/gallery/next.jpg");
+```
+
+It returns a `Promise<void>` that resolves once the fetch settles (success or failure), and shares the same cache `SmartImage` reads from — so a `SmartImage` rendered for that `src` afterwards loads instantly.
+
+> ⚠️ Ignored when `priority` is also set — an above-the-fold image is already loading at the highest priority, so a background prefetch would be redundant.
+
 <a id="aspect-ratio-prevent-cls"></a>
 
 ## Aspect Ratio (Prevent CLS)
@@ -355,6 +419,43 @@ aspectRatio="21 / 9"
 > With the **number** form `{16 / 9}` JavaScript does the division; with the **string** form `"16 / 9"` the `/` stays literal inside the quotes. Both end up as valid CSS.
 
 > 💡 Using `aspectRatio` means you usually don't need to specify `height`.
+
+<a id="object-fit-position"></a>
+
+## Object Fit & Position
+
+Control how an image fills its box, and which part of it stays visible when it's cropped — without reaching for a `style` prop.
+
+```jsx
+<SmartImage
+  src="/product.jpg"
+  width={400}
+  height={300}
+  objectFit="cover"
+/>
+```
+
+`objectFit` accepts the same values as CSS [`object-fit`](https://developer.mozilla.org/en-US/docs/Web/CSS/object-fit): `cover`, `contain`, `fill`, `none`, `scale-down`.
+
+Pair it with `objectPosition` to keep the important part of the image visible when it's cropped — a face in a profile photo, or an off-center product:
+
+```jsx
+<SmartImage
+  src="/profile.jpg"
+  width={200}
+  height={200}
+  objectFit="cover"
+  objectPosition="top"
+/>
+```
+
+`objectPosition` accepts the same values as CSS [`object-position`](https://developer.mozilla.org/en-US/docs/Web/CSS/object-position): keywords (`center`, `top`, `bottom`, `left`, `right`) or a coordinate pair (`"50% 20%"`).
+
+Both work with `width`/`height`, `aspectRatio`, `responsive`, `skeleton`, `placeholder="blur"`, `thumbnail`, and `zoom` — set once on the `SmartImage`, and every mode respects it.
+
+> 💡 In wrapper mode (`skeleton`, `placeholder="blur"`, or `thumbnail`) `objectFit` already defaults to `"cover"` so the image fills its box — set `objectFit` explicitly to change that. On a plain `<img>` (none of those props set) it's left at the browser default (`"fill"`) unless you set it.
+
+> ⚠️ The full-resolution image shown in a `zoom` lightbox always uses `object-fit: contain` (so the whole image stays visible), independent of `objectFit` — override it via `zoomOptions.style` if needed.
 
 <a id="skeleton-loader"></a>
 
@@ -1126,6 +1227,51 @@ Useful for:
 - Analytics
 - Debugging
 
+## onLoadProgress
+
+Track byte-level download progress while an image loads — build a custom progress bar or percentage indicator for large images.
+
+```jsx
+<SmartImage
+  src="/large-image.jpg"
+  onLoadProgress={(progress) => {
+    console.log(progress); // { loaded: 450000, total: 1000000, progress: 45 }
+  }}
+/>
+```
+
+### LoadProgressInfo
+
+```ts
+interface LoadProgressInfo {
+  loaded: number;
+  total: number | undefined;
+  progress: number | undefined;
+}
+```
+
+Fired repeatedly as bytes arrive. `total` and `progress` are `undefined` when the server doesn't send a `Content-Length` header — treat that as **indeterminate** progress (show a spinner, not a percentage) rather than assuming 0%.
+
+Useful for:
+
+- Custom progress bars / percentage indicators
+- Galleries and dashboards with large or high-resolution images
+- Image editors
+- Performance monitoring and debugging
+
+### How it works — and its limits
+
+A native `<img>` doesn't expose byte-level progress, so `onLoadProgress` fetches the image itself with `fetch`/`ReadableStream`, reports progress as chunks arrive, then hands the assembled bytes to an `<img>` via an object URL. This only works when:
+
+- The browser supports `fetch` and `ReadableStream` (all modern browsers).
+- `src` is same-origin, or cross-origin with CORS headers that allow reading the response body.
+
+When either isn't true — e.g. a cross-origin image without CORS headers — React Smart Image **silently falls back to a normal load with no progress events**. The image still loads correctly; you just won't get progress callbacks for it. This is a deliberate choice: rather than fabricate a fake progress curve, `onLoadProgress` simply doesn't fire when byte-level progress isn't reliably available.
+
+> ⚠️ Not supported together with `responsive` — the browser (not this library) chooses which `srcSet` candidate to fetch, so there's no single request to attribute progress to. `onLoadProgress` is ignored when `responsive`/`srcSet` is active.
+
+> ⚠️ Never fires for a cache hit — there's no network transfer to report progress on.
+
 ## onZoomChange
 
 Know when the zoom viewer opens or closes.
@@ -1171,6 +1317,16 @@ Useful after:
 - Replacing an image
 - CDN cache refresh
 
+## Prefetch an Image Imperatively
+
+```tsx
+import { prefetchImage } from "@concatstring/react-smart-image";
+
+prefetchImage("/gallery/next.jpg");
+```
+
+Fetches the image in the background at low priority and marks it `loaded` in the same cache `SmartImage` reads from — without needing to render a `SmartImage` for it first. See [Image Prefetch](#image-prefetch) for the declarative `prefetch` prop.
+
 <a id="typescript"></a>
 
 # TypeScript
@@ -1181,6 +1337,7 @@ All public types are exported.
 import type {
   SmartImageProps,
   LoadInfo,
+  LoadProgressInfo,
   ResponsiveSizes,
   ZoomOptions,
   ZoomMode,
@@ -1191,6 +1348,7 @@ import type {
   SmartImageProviderProps,
   SmartImagePresetConfig,
   SmartImagePresetMap,
+  PrefetchOptions,
 } from "@concatstring/react-smart-image";
 ```
 
@@ -1214,8 +1372,6 @@ The wrapper stays mounted after the image finishes loading, so the same `<img>` 
 
 # API Reference
 
-## SmartImage
-
 ### Core Props
 
 | Prop | Type | Default | Description |
@@ -1234,7 +1390,10 @@ All standard `<img>` HTML attributes (`className`, `style`, `onClick`, `onLoad`,
 |------|------|----------|-------------|
 | lazy | boolean | false | Delay loading until the image enters the viewport. Ignored when `priority` is set |
 | priority | boolean | false | Load with maximum priority — disables `lazy`, sets `loading="eager"` + `fetchpriority="high"`, injects `<link rel="preload">` |
+| prefetch | boolean | false | Fetch this image in the background ahead of it being needed, warming the cache at low fetch priority. Doesn't force eager rendering. Also warms a distinct `zoomSrc` when `zoom` is set. Ignored when `priority` is set |
 | aspectRatio | number \| string | — | Reserve layout space before load via CSS `aspect-ratio`. Prevents layout shift (improves CLS) |
+| objectFit | cover, contain, fill, none, scale-down | `cover` in wrapper mode (`skeleton`/`placeholder`/`thumbnail`), browser default otherwise | How the image fills its `width`/`height`/`aspectRatio` box |
+| objectPosition | string | — | Which part of the image stays visible when `objectFit` crops it (e.g. `"top"`, `"50% 20%"`) |
 
 ### Placeholder
 
@@ -1322,6 +1481,7 @@ interface ResponsiveSizes {
 |------|------|----------|-------------|
 | onVisible | Function | — | Fires once when image enters viewport |
 | onLoadInfo | Function | — | Returns load statistics |
+| onLoadProgress | Function | — | Reports byte-level download progress (`{ loaded, total, progress }`). Requires `fetch`/CORS; ignored with `responsive` |
 | onZoomChange | Function | — | Zoom open / close callback. Only fires for `lightbox`/`fullscreen` modes |
 
 ## SmartImageProvider (Props Reference)
