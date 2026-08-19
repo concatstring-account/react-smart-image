@@ -215,7 +215,7 @@ Instead of combining multiple image libraries, React Smart Image provides everyt
 | Better UX | `placeholder="blur"` |
 | Loading Animation | `skeleton` |
 | Product Gallery | `zoom` |
-| Magnifying Glass | `magnifier` |
+| Magnifying Glass | `zoomOptions={{ mode: "magnifier" }}` |
 | Broken Image | `fallback` |
 | Retry Failed Images | `retry` |
 | Modern Formats | `format="auto"` |
@@ -1142,7 +1142,7 @@ The closest value always wins.
 | User Avatar | skeleton |
 | Dashboard | lazy |
 | Ecommerce | responsive + zoom + retry |
-| Blog | lazy + blur |
+| Blog | lazy + placeholder="blur" |
 | Portfolio | thumbnail + zoom |
 | Marketing Page | priority + aspectRatio |
 | Slow Network | autoBlur + retry |
