@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2] - 2026-08-19
+
+### Fixed
+
+- A `SmartImage` with both `lazy` and `prefetch` set could render permanently as a broken image: if `prefetch` finished warming the cache while the element was still off-screen, the load effect's cache-hit path never synced `displaySrc`/`loadState` once the element scrolled into view, so the `<img>` was left with no `src` at all. `useImageLoader` now re-syncs display state whenever it finds the cache already warm, regardless of when that happened relative to mount.
+
 ## [2.1.1] - 2026-08-13
 
 ### Added
@@ -57,3 +63,16 @@ All notable changes to this project will be documented in this file.
 - `useIntersectionObserver` hook updated to support the new `onVisible` visibility tracking.
 - README significantly expanded with documentation for all new features.
 - Package description and `package.json` metadata updated to reflect the broader feature set.
+
+## [1.0.1] - 2026-06-26
+
+### Added
+
+- Live demo link in the README.
+- `repository`, `bugs`, and `homepage` fields in `package.json`.
+
+## [1.0.0] - 2026-06-24
+
+### Added
+
+- Initial public release: Intersection Observer-based lazy loading, WebP detection with fallback, blur/LQIP placeholders, skeleton loaders, responsive `srcSet` generation, and retry logic with exponential backoff.
